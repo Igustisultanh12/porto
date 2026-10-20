@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Policies;
+
+use App\Models\Content;
+use App\Models\User;
+
+class ContentPolicy
+{
+    public function view(?User $user, Content $content): bool
+    {
+        return (bool) $user?->is_admin || $content->isPublished();
+    }
+
+    public function create(User $user): bool
+    {
+        return (bool) $user->is_admin;
+    }
+
+    public function update(User $user, Content $content): bool
+    {
+        return (bool) $user->is_admin;
+    }
+
+    public function delete(User $user, Content $content): bool
+    {
+        return (bool) $user->is_admin;
+    }
+}

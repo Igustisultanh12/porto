@@ -1,0 +1,34 @@
+# Gabungkan blok ini ke vhost aaPanel, jangan duplikasi server/SSL/PHP include.
+# Ganti example.com dan path; aktifkan SSL melalui aaPanel terlebih dahulu.
+server {
+    listen 80;
+    server_name example.com www.example.com;
+    root /www/wwwroot/porto/public;
+    index index.php;
+    client_max_body_size 12m;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+    # Laravel front controller saja yang boleh dieksekusi.
+    location = /index.php {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_pass unix:/tmp/php-cgi-83.sock;
+        fastcgi_hide_header X-Powered-By;
+    }
+    location ~* \.(?:php|phtml|phar)$ { return 404; }
+    location ~ /\.(?!well-known).* { deny all; }
+    location ~* ^/(?:storage|uploads)/.*\.(?:php|phtml|phar)$ { return 404; }
+    location ^~ /build/ {
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    location = /favicon.ico { access_log off; log_not_found off; }
+}

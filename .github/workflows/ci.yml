@@ -1,0 +1,56 @@
+name: Application checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci-only-password
+          MARIADB_DATABASE: porto_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, gd, pdo_mysql, pdo_sqlite, zip, bcmath
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: cp .env.example .env && php artisan key:generate
+      - run: npm ci
+      - run: npm run typecheck && npm run lint && npm run format:check && npm run build
+      - run: php vendor/bin/phpunit
+      - name: MariaDB integration tests
+        run: php vendor/bin/phpunit tests/Feature/PortfolioTest.php
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: porto_test
+          DB_USERNAME: root
+          DB_PASSWORD: ci-only-password
+      - run: composer audit && npm audit
+      - run: npx playwright install --with-deps chromium
+      - name: SSR browser tests
+        run: |
+          php artisan inertia:start-ssr > /tmp/porto-ssr.log 2>&1 &
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure
+          path: test-results

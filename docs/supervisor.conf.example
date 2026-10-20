@@ -1,0 +1,29 @@
+# Sesuaikan path PHP dan node. SSR hanya bind 127.0.0.1:13714.
+# node harus ditemukan dalam PATH user www.
+[program:porto-queue]
+command=/www/server/php/83/bin/php /www/wwwroot/porto/artisan queue:work database --sleep=3 --tries=3 --timeout=60
+directory=/www/wwwroot/porto
+user=www
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+stopwaitsecs=90
+redirect_stderr=true
+stdout_logfile=/www/wwwroot/porto/storage/logs/queue-worker.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=3
+
+[program:porto-ssr]
+command=/www/server/php/83/bin/php /www/wwwroot/porto/artisan inertia:start-ssr
+directory=/www/wwwroot/porto
+user=www
+environment=PATH="/usr/local/bin:/usr/bin:/bin"
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+redirect_stderr=true
+stdout_logfile=/www/wwwroot/porto/storage/logs/ssr.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=3
